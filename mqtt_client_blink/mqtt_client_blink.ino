@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h> 
 
+#define LIGHT_SENSOR_GPIO 11 
 #define RGB_BUILTIN 48
 #define NUMPIXELS 16 // Popular NeoPixel ring size
 
@@ -20,6 +21,7 @@ PubSubClient client(espClient);
 long lastMsg = 0;
 int loop_iter = 0;
 bool state_toggle;
+bool last_light_sensorBool;
 
 void setup() {
   delay(100);
@@ -44,6 +46,8 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   client.setServer(mqtt_server, 1883);
+  
+  pinMode(LIGHT_SENSOR_GPIO, OUTPUT);
 }
 
 void loop() {
@@ -52,13 +56,16 @@ void loop() {
     reconnect();
   }
 
+  bool last_light_sensorBool = digitalRead(LIGHT_SENSOR_GPIO);
+
   StaticJsonDocument<80> doc;
   char output[80];
 
   long now = millis();
   long interval_delta = now - lastMsg;
-
-  if (interval_delta > 2500) {
+  Serial.print("interval_delta: ");
+  Serial.println(interval_delta);
+  if (interval_delta < 2500) {
     set_rgb_led_state(1);
   } else {
     set_rgb_led_state(0);
@@ -70,8 +77,13 @@ void loop() {
     // put your main code here, to run repeatedly:
     Serial.print("loop_iter: ");
     Serial.println(loop_iter);
+    Serial.print("last_light_sensorBool: ");
+    Serial.println(last_light_sensorBool);
+    Serial.print("millis_timestamp: ");
+    Serial.println(now);
     
     doc["loop_iter"] = loop_iter;
+    doc["state"] = last_light_sensorBool;
     doc["millis_timestamp"] = now;
 
     serializeJson(doc, output);
